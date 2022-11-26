@@ -1,7 +1,7 @@
 use std::io::Read;
 
 pub trait Decodable {
-    fn decode<R: Read>(&mut self, mutreader: R) -> Result<(), &str>;
+    fn decode_new<R: Read>(mutreader: R) -> Self;
 }
 
 pub trait Encodable {

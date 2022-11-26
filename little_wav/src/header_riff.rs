@@ -24,12 +24,11 @@ impl Chunk for HeaderRiff {
 }
 
 impl HeaderRiff {
-    pub fn new(size: u32) -> Self {
-        Self { size }
+    pub fn new() -> Self {
+        Self { size: 0 }
     }
-    pub fn set_size(mut self, size: u32) -> Self {
-        self.size = size;
-        self
+    pub fn set_size(&mut self, header_size: usize, samples_len: usize, sample_size: usize) {
+        self.size = (header_size + sample_size * samples_len) as u32;
     }
 
     // returns a static type for RIFF chunk
@@ -51,23 +50,23 @@ impl Encodable for HeaderRiff {
 }
 
 impl Decodable for HeaderRiff {
-    fn decode<R: Read>(&mut self, mut reader: R) -> Result<(), &str> {
+    fn decode_new<R: Read>(mut reader: R) -> Self {
         let mut buffer_16 = [0; 4];
 
         reader.read_exact(&mut buffer_16).unwrap();
         if buffer_16 != *RIFF_ID {
-            return Err("RIFF ID not found");
+            panic!("RIFF ID not found");
         }
 
         reader.read_exact(&mut buffer_16).unwrap();
-        self.size = u32::from_le_bytes(buffer_16);
+        let size = u32::from_le_bytes(buffer_16);
 
         reader.read_exact(&mut buffer_16).unwrap();
         if buffer_16 != *RIFF_TYPE {
-            return Err("RIFF Type not found");
+            panic!("RIFF Type not found");
         }
 
-        Ok(())
+        Self { size }
     }
 }
 
@@ -76,17 +75,9 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_encode() {
-        let header = HeaderRiff::new(0);
-        let encoded = header.encode();
-        assert_eq!(encoded, [82, 73, 70, 70, 0, 0, 0, 0, 87, 65, 86, 69]);
-    }
-
-    #[test]
     fn test_decode() {
-        let mut header = HeaderRiff::default();
         let encoded = [82, 73, 70, 70, 2, 0, 0, 0, 87, 65, 86, 69];
-        header.decode(&encoded[..]).unwrap();
+        let header = HeaderRiff::decode_new(&encoded[..]);
 
         assert_eq!(header.size, 2);
     }
